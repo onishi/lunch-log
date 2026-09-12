@@ -17,6 +17,7 @@
 |------------|------|-------------|
 | `core` | ドメインモデルと純粋なロジック (ID 生成、geohash、検証、食事種別の推定) | 不要 |
 | `app` | Android アプリ本体 (Compose / CameraX / Room / Firebase) | 必要 |
+| `functions` | Cloud Functions (TypeScript)。Places API の中継など | 不要 |
 
 `core` を Android から切り離しているのは、**端末や SDK なしでロジックを
 テストできるようにする**ため。判断を含むコードはできるだけ `core` に置く。
@@ -43,6 +44,17 @@
 ```bash
 ./gradlew :core:test          # ドメイン層のテスト (Android SDK 不要)
 ./gradlew :app:assembleDebug  # アプリのビルド
+
+cd functions && npm ci && npm test   # サーバ処理のテスト
+```
+
+### Cloud Functions
+
+Places API のキーは Secret Manager に置く (端末には出さない)。
+
+```bash
+firebase functions:secrets:set PLACES_API_KEY
+firebase deploy --only functions
 ```
 
 ## 開発の進め方

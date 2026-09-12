@@ -691,6 +691,35 @@ match /users/{uid}/{document=**} {
 | `GET`  | `/v1/export?format=json\|csv` | 全記録のエクスポート。 |
 | `POST` | `/v1/account/delete` | アカウントとデータの削除ジョブ登録。 |
 
+**`POST /v1/places/nearby` の入出力**
+
+```jsonc
+// 要求
+{ "lat": 35.6581, "lng": 139.7016, "radiusMeters": 150 }  // radiusMeters は任意 (1..1000)
+
+// 応答
+{
+  "candidates": [
+    {
+      "placeId": "ChIJ...",
+      "name": "◯◯食堂",
+      "address": "渋谷区道玄坂1-2-3",
+      "lat": 35.6585, "lng": 139.7020,
+      "distanceMeters": 48,
+      "primaryType": "restaurant"
+    }
+  ],
+  "cached": false
+}
+```
+
+- `radiusMeters` を省略すると 150m → 300m の順に自動で広げる (§6.1)。
+  指定された場合は広げない。上限 1000m — 大きな半径はそのまま費用になるため。
+- `candidates` は距離の近い順、最大 5 件。**空配列は失敗ではない** (手入力に落ちる)。
+- `cached` はキャッシュから返したかどうか。費用の把握用で、クライアントは使わない。
+- キャッシュのキーは「約 100m のマス + 半径」。**空の結果もキャッシュする** —
+  人けのない場所で毎回課金されるのを防ぐため。
+
 **共通エラー形式**
 
 ```jsonc

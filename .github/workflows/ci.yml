@@ -23,6 +23,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew :core:test
 
+  functions:
+    name: functions (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
   app:
     name: app (Android)
     runs-on: ubuntu-latest

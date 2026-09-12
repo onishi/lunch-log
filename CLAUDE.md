@@ -18,6 +18,9 @@
 ./gradlew :core:test            # ドメイン層のテスト。Android SDK なしで動く
 ./gradlew :app:assembleDebug    # デバッグビルド
 ./gradlew :app:testDebugUnitTest
+
+cd functions && npm test        # サーバ処理のテスト
+cd functions && npm run typecheck
 ```
 
 ## モジュールの方針
@@ -25,6 +28,8 @@
 - **`core` は Android に依存させない。** `android.*` と `androidx.*` を import しない。
   判断を含むロジック (検証、推定、変換、ID 生成) はここに置き、ユニットテストを書く。
 - **`app` は薄く保つ。** UI と、Android の API を叩く部分だけ。
+- **`functions` も同じ考え方で組む。** 外部 API の呼び出しは関数として注入し、
+  判断 (半径を広げる、並べ替える、キャッシュを使う) はネットワークなしでテストする。
 
 ## コーディング規約
 

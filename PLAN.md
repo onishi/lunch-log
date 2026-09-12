@@ -172,19 +172,25 @@
 
 ここだけサーバ (Cloud Functions) が必要になる。**MVP 唯一のサーバ実装。**
 
-- [ ] Cloud Functions プロジェクト作成 (TypeScript)
-- [ ] `POST /v1/places/nearby` を実装 (SPEC §8)
-  - Places API `searchNearby` を呼ぶ。API キーは Functions 側に隠す
-  - 半径 150m → 取れなければ 300m (SPEC §6.1)
-  - Firebase ID トークンで認証
-- [ ] 同一座標 (100m グリッド) の結果を 24 時間キャッシュ (コスト対策)
+- [x] Cloud Functions プロジェクト作成 (TypeScript + vitest)
+- [x] `POST /v1/places/nearby` を実装 (SPEC §8)
+  - [x] Places API `searchNearby` を呼ぶ。API キーは Secret Manager に置き端末に出さない
+  - [x] 半径 150m → 取れなければ 300m (SPEC §6.1)
+  - [x] Firebase ID トークンで認証
+  - [x] レート制限 60 req/分 (SPEC §8)
+  - [x] 入力の検証 (半径の上限 1000m — 大きな半径はそのまま費用になる)
+  - [ ] エミュレータで実際に動かす (Firebase プロジェクト作成後)
+- [x] 同一座標 (100m グリッド) の結果を 24 時間キャッシュ (コスト対策)。空の結果もキャッシュする
 - [ ] Android: 権限説明画面 → `ACCESS_FINE_LOCATION` 要求 (SPEC §10)
 - [ ] FusedLocationProvider で現在地取得 (10 秒タイムアウト)
 - [ ] 記録編集画面に店舗候補チップを表示。タップで店名確定
 - [ ] **フォールバックを必ず実装** (SPEC §6.1)
   - 権限拒否 / 取得失敗 → 直近に訪れた店の履歴を候補に
   - 候補にない → 自由入力
-- [ ] スコアリングは距離順のみ (履歴・営業時間の加点は Phase 2)
+- [x] スコアリングは距離順のみ (履歴・営業時間の加点は Phase 2)
+
+> Functions のテストは 49 件が通っている (`cd functions && npm test`)。
+> 実際の Places API を叩く確認は Firebase プロジェクトの作成後。
 
 ### 1-6. 同期 (F-111, F-302)
 
@@ -366,3 +372,4 @@ Cloud Logging で足りるものとする。
 | 2026-09-12 | SPEC.md v0.4 確定。PLAN.md 作成。 |
 | 2026-09-12 | Phase 0 の足場を作成 (Gradle / Version Catalog / CI / README / CLAUDE.md)。`:core` + `:app` の 2 モジュール構成に決定。 |
 | 2026-09-12 | Phase 1-2 のドメイン層を `:core` に実装。テスト 32 件が通る。Android を含む部分は開発機で継続。 |
+| 2026-09-12 | 順序を入れ替え、Phase 1-5 のサーバ側 (`/v1/places/nearby`) を先に実装。テスト 49 件が通る。 |
