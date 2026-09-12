@@ -31,9 +31,13 @@ import app.lunchlog.ui.theme.LunchLogTheme
 private object Routes {
     const val SIGN_IN = "sign-in"
     const val HOME = "home"
-    const val EDIT = "edit"
     const val CAMERA = "camera"
+
+    /** recordId が空なら新規作成。画面は同じものを使い回す (SPEC §9.1)。 */
+    const val EDIT = "edit?recordId={recordId}"
     const val DETAIL = "detail/{recordId}"
+
+    fun edit(recordId: String? = null) = if (recordId == null) "edit?recordId=" else "edit?recordId=$recordId"
 
     fun detail(recordId: String) = "detail/$recordId"
 }
@@ -65,7 +69,6 @@ private fun LunchLogNavHost(
     startDestination: String,
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
-
         composable(Routes.SIGN_IN) {
             val viewModel: SignInViewModel = viewModel(factory = ViewModelFactory(locator))
             SignInScreen(viewModel) {
@@ -77,19 +80,30 @@ private fun LunchLogNavHost(
             val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(locator))
             HomeScreen(
                 viewModel = viewModel,
-                onAddRecord = { navController.navigate(Routes.EDIT) },
+                onAddRecord = { navController.navigate(Routes.edit()) },
                 onOpenRecord = { navController.navigate(Routes.detail(it)) },
             )
         }
 
-        composable(Routes.EDIT) { entry ->
+        composable(
+            route = Routes.EDIT,
+            arguments = listOf(
+                navArgument("recordId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+        ) { entry ->
             // 編集画面は撮影画面と行き来するため、ViewModel を NavBackStackEntry に紐づけて
             // 戻ってきたときに入力内容を保つ。
             val viewModel: RecordEditViewModel = viewModel(
                 viewModelStoreOwner = entry,
                 factory = ViewModelFactory(locator),
             )
-            LaunchedEffect(Unit) { viewModel.startNew() }
+            val editingId = entry.arguments?.getString("recordId").orEmpty()
+            LaunchedEffect(editingId) {
+                if (editingId.isEmpty()) viewModel.startNew() else viewModel.load(editingId)
+            }
 
             // 撮影画面から戻るときに Uri を受け取る。
             val capturedUri = entry.savedStateHandle.get<String>(CAPTURED_URI_KEY)
@@ -128,7 +142,7 @@ private fun LunchLogNavHost(
 
             RecordDetailScreen(
                 viewModel = viewModel,
-                onEdit = { /* 編集画面への遷移は Phase 2 で足す (PLAN.md 1-4) */ },
+                onEdit = { navController.navigate(Routes.edit(recordId)) },
                 onDeleted = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
             )

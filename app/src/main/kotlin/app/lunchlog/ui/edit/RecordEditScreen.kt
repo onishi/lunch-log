@@ -17,8 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,6 +62,10 @@ fun RecordEditScreen(
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(viewModel::addPhoto)
     }
+
+    val requestLocation = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> viewModel.onLocationPermissionResult(granted) }
 
     Scaffold(
         topBar = {
@@ -109,6 +114,13 @@ fun RecordEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            if (state.needsLocationRationale) {
+                LocationRationale(
+                    onAllow = { requestLocation.launch(android.Manifest.permission.ACCESS_FINE_LOCATION) },
+                    onSkip = viewModel::dismissLocationRationale,
+                )
+            }
+
             SuggestionRow(state, viewModel)
 
             MealTypeRow(state.mealType, viewModel::setMealType)
@@ -144,6 +156,30 @@ private fun PhotoRow(paths: List<String>, onTakePhoto: () -> Unit, onPickPhoto: 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onTakePhoto) { Text("撮影") }
             OutlinedButton(onClick = onPickPhoto) { Text("写真を選ぶ") }
+        }
+    }
+}
+
+/**
+ * 位置情報の使い道の説明 (SPEC §10)。
+ *
+ * OS のダイアログをいきなり出さない。断られても記録は手入力で続けられるため、
+ * 「あとで」を同じ大きさで置く。
+ */
+@Composable
+private fun LocationRationale(onAllow: () -> Unit, onSkip: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("近くのお店から店名を埋められます", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "位置情報は記録するときだけ使います。許可しなくても、履歴から店を選んだり手で入力したりできます。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onAllow) { Text("位置情報を許可") }
+                OutlinedButton(onClick = onSkip) { Text("あとで") }
+            }
         }
     }
 }

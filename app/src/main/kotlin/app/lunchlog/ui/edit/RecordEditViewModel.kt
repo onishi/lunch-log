@@ -35,6 +35,8 @@ data class RecordEditState(
     val saving: Boolean = false,
     val errors: List<RecordError> = emptyList(),
     val isNew: Boolean = true,
+    /** 位置情報の使い道を説明する必要があるか (まだ許可も拒否もしていない)。 */
+    val needsLocationRationale: Boolean = false,
     /** 既存の記録を編集しているときの作成時刻。新規なら null。 */
     val createdAt: Instant? = null,
 )
@@ -61,8 +63,20 @@ class RecordEditViewModel(
         _state.value = RecordEditState(
             eatenAt = now,
             mealType = MealTypeInference.infer(now, ZoneId.systemDefault()),
+            // 権限がまだなら、OS のダイアログの前に使い道を説明する (SPEC §10)。
+            needsLocationRationale = !currentLocation.hasPermission(),
         )
         loadSuggestions()
+    }
+
+    /** 位置情報の説明を閉じる。許可・拒否のどちらでも候補は読み直す。 */
+    fun onLocationPermissionResult(granted: Boolean) {
+        _state.update { it.copy(needsLocationRationale = false) }
+        if (granted) loadSuggestions()
+    }
+
+    fun dismissLocationRationale() {
+        _state.update { it.copy(needsLocationRationale = false) }
     }
 
     fun load(id: String) {

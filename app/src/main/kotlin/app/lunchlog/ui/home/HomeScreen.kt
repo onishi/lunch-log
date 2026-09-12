@@ -44,7 +44,7 @@ fun HomeScreen(
     onAddRecord: () -> Unit,
     onOpenRecord: (String) -> Unit,
 ) {
-    val sections by viewModel.sections.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("ランチログ") }) },
@@ -52,7 +52,7 @@ fun HomeScreen(
             ExtendedFloatingActionButton(onClick = onAddRecord, text = { Text("記録する") }, icon = {})
         },
     ) { padding ->
-        if (sections.isEmpty()) {
+        if (state.sections.isEmpty()) {
             EmptyState(Modifier.padding(padding))
             return@Scaffold
         }
@@ -62,10 +62,14 @@ fun HomeScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            sections.forEach { section ->
+            state.sections.forEach { section ->
                 item(key = "header-${section.date}") { DayHeader(section.date) }
                 items(section.records, key = { it.id }) { record ->
-                    RecordCard(record, onClick = { onOpenRecord(record.id) })
+                    RecordCard(
+                        record = record,
+                        pendingSync = record.id in state.pendingSyncIds,
+                        onClick = { onOpenRecord(record.id) },
+                    )
                 }
             }
         }
@@ -98,7 +102,7 @@ private fun DayHeader(date: LocalDate) {
 }
 
 @Composable
-private fun RecordCard(record: LunchRecord, onClick: () -> Unit) {
+private fun RecordCard(record: LunchRecord, pendingSync: Boolean, onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -131,11 +135,22 @@ private fun RecordCard(record: LunchRecord, onClick: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    text = record.eatenAt.atZone(ZoneId.systemDefault()).format(TIME_FORMAT),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = record.eatenAt.atZone(ZoneId.systemDefault()).format(TIME_FORMAT),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (pendingSync) {
+                        // 同期待ちであることを黙って隠さない。圏外で撮った記録が
+                        // 端末にしかない状態を利用者が把握できるようにする (SPEC F-111)。
+                        Text(
+                            text = "同期待ち",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                }
             }
         }
     }

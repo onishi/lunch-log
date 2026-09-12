@@ -30,6 +30,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val pushFailed = push(locator, uid)
         val pullFailed = pull(locator, uid)
 
+        // 同期が済んだものだけを対象に、30 日を過ぎた削除済みを消す (SPEC F-112)。
+        runCatching { locator.recordRepository.purgeOldDeleted() }
+
         // どちらかが失敗していれば WorkManager のバックオフに任せて再試行する。
         return if (pushFailed || pullFailed) Result.retry() else Result.success()
     }

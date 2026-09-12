@@ -21,6 +21,9 @@
 
 cd functions && npm test        # サーバ処理のテスト
 cd functions && npm run typecheck
+
+scripts/ktlint.sh               # Kotlin のスタイル検査 (Android SDK 不要)
+scripts/ktlint.sh --fix         # 自動修正
 ```
 
 ## モジュールの方針

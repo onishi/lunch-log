@@ -11,6 +11,8 @@ import app.lunchlog.location.CurrentLocation
 import app.lunchlog.sync.SyncWorker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.PersistentCacheSettings
 import com.google.firebase.storage.FirebaseStorage
 
 /**
@@ -27,7 +29,16 @@ class ServiceLocator private constructor(context: Context) {
     val database: LunchLogDatabase by lazy { LunchLogDatabase.create(appContext) }
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
     val photoUploader: PhotoUploader by lazy { PhotoUploader(FirebaseStorage.getInstance()) }
-    val recordSource: FirestoreRecordSource by lazy { FirestoreRecordSource(FirebaseFirestore.getInstance()) }
+    val recordSource: FirestoreRecordSource by lazy {
+        // オフライン永続化は既定で有効だが、MVP の受け入れ条件に関わるため明示する
+        // (SPEC F-111: 圏外で記録して復帰したら同期される)。
+        val firestore = FirebaseFirestore.getInstance().apply {
+            firestoreSettings = FirebaseFirestoreSettings.Builder(firestoreSettings)
+                .setLocalCacheSettings(PersistentCacheSettings.newBuilder().build())
+                .build()
+        }
+        FirestoreRecordSource(firestore)
+    }
     val placesClient: PlacesClient by lazy { PlacesClient(auth) }
     val currentLocation: CurrentLocation by lazy { CurrentLocation(appContext) }
 

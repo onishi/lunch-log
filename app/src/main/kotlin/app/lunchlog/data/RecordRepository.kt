@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 
+/** 記録と、その同期状態。 */
+data class SyncedRecord(val record: LunchRecord, val needsSync: Boolean)
+
 /**
  * 記録の読み書き (SPEC §5.2)。
  *
@@ -29,6 +32,10 @@ class RecordRepository(
 ) {
 
     fun observeAll(): Flow<List<LunchRecord>> = dao.observeAll().map { list -> list.map { it.toDomain() } }
+
+    /** 一覧用。同期状態を添えて返す (未同期マークの表示に使う)。 */
+    fun observeAllWithSync(): Flow<List<SyncedRecord>> =
+        dao.observeAll().map { list -> list.map { SyncedRecord(it.toDomain(), it.needsSync) } }
 
     fun observe(id: String): Flow<LunchRecord?> = dao.observe(id).map { it?.toDomain() }
 
