@@ -1,47 +1,139 @@
 package app.lunchlog
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import app.lunchlog.ui.ViewModelFactory
+import app.lunchlog.ui.auth.SignInScreen
+import app.lunchlog.ui.auth.SignInViewModel
+import app.lunchlog.ui.camera.CameraScreen
+import app.lunchlog.ui.detail.RecordDetailScreen
+import app.lunchlog.ui.detail.RecordDetailViewModel
+import app.lunchlog.ui.edit.RecordEditScreen
+import app.lunchlog.ui.edit.RecordEditViewModel
+import app.lunchlog.ui.home.HomeScreen
+import app.lunchlog.ui.home.HomeViewModel
+import app.lunchlog.ui.theme.LunchLogTheme
+
+private object Routes {
+    const val SIGN_IN = "sign-in"
+    const val HOME = "home"
+    const val EDIT = "edit"
+    const val CAMERA = "camera"
+    const val DETAIL = "detail/{recordId}"
+
+    fun detail(recordId: String) = "detail/$recordId"
+}
 
 class MainActivity : ComponentActivity() {
+
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
-            MaterialTheme {
-                Scaffold { innerPadding ->
-                    Placeholder(Modifier.padding(innerPadding))
-                }
+            LunchLogTheme {
+                val locator = remember { ServiceLocator.from(applicationContext) }
+                val navController = rememberNavController()
+                val startDestination = if (locator.auth.currentUser != null) Routes.HOME else Routes.SIGN_IN
+
+                LunchLogNavHost(locator, navController, startDestination)
             }
         }
     }
 }
 
-/**
- * Phase 0 の足場。ここから Phase 1-1 (ログイン) に差し替えていく。
- * PLAN.md の Phase 1 を参照。
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Placeholder(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("ランチログ", style = MaterialTheme.typography.headlineMedium)
-        Text("Phase 0: 足場", style = MaterialTheme.typography.bodyMedium)
+private fun LunchLogNavHost(
+    locator: ServiceLocator,
+    navController: NavHostController,
+    startDestination: String,
+) {
+    NavHost(navController = navController, startDestination = startDestination) {
+
+        composable(Routes.SIGN_IN) {
+            val viewModel: SignInViewModel = viewModel(factory = ViewModelFactory(locator))
+            SignInScreen(viewModel) {
+                navController.navigate(Routes.HOME) { popUpTo(Routes.SIGN_IN) { inclusive = true } }
+            }
+        }
+
+        composable(Routes.HOME) {
+            val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(locator))
+            HomeScreen(
+                viewModel = viewModel,
+                onAddRecord = { navController.navigate(Routes.EDIT) },
+                onOpenRecord = { navController.navigate(Routes.detail(it)) },
+            )
+        }
+
+        composable(Routes.EDIT) { entry ->
+            // 編集画面は撮影画面と行き来するため、ViewModel を NavBackStackEntry に紐づけて
+            // 戻ってきたときに入力内容を保つ。
+            val viewModel: RecordEditViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = ViewModelFactory(locator),
+            )
+            LaunchedEffect(Unit) { viewModel.startNew() }
+
+            // 撮影画面から戻るときに Uri を受け取る。
+            val capturedUri = entry.savedStateHandle.get<String>(CAPTURED_URI_KEY)
+            LaunchedEffect(capturedUri) {
+                capturedUri?.let {
+                    viewModel.addPhoto(Uri.parse(it))
+                    entry.savedStateHandle.remove<String>(CAPTURED_URI_KEY)
+                }
+            }
+
+            RecordEditScreen(
+                viewModel = viewModel,
+                onSaved = { navController.popBackStack() },
+                onTakePhoto = { navController.navigate(Routes.CAMERA) },
+                onCancel = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.CAMERA) {
+            CameraScreen(
+                onCaptured = { uri ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set(CAPTURED_URI_KEY, uri.toString())
+                    navController.popBackStack()
+                },
+                onCancel = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Routes.DETAIL,
+            arguments = listOf(navArgument("recordId") { type = NavType.StringType }),
+        ) { entry ->
+            val recordId = requireNotNull(entry.arguments?.getString("recordId"))
+            val viewModel: RecordDetailViewModel =
+                viewModel(factory = ViewModelFactory(locator, recordId))
+
+            RecordDetailScreen(
+                viewModel = viewModel,
+                onEdit = { /* 編集画面への遷移は Phase 2 で足す (PLAN.md 1-4) */ },
+                onDeleted = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+            )
+        }
     }
 }
+
+private const val CAPTURED_URI_KEY = "captured-uri"

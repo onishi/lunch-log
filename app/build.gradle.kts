@@ -7,6 +7,9 @@ plugins {
     // alias(libs.plugins.google.services)
 }
 
+val functionsBaseUrl: String = providers.gradleProperty("lunchlog.functionsBaseUrl").getOrElse("")
+val googleWebClientId: String = providers.gradleProperty("lunchlog.googleWebClientId").getOrElse("")
+
 android {
     namespace = "app.lunchlog"
     compileSdk = 35
@@ -18,6 +21,11 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 環境ごとの値はコミットせず、local.properties か -P で渡す。
+        // 未設定でもビルドは通り、その機能だけが無効になる (アプリは止まらない)。
+        buildConfigField("String", "FUNCTIONS_BASE_URL", "\"$functionsBaseUrl\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -35,7 +43,10 @@ android {
 
     kotlinOptions { jvmTarget = "17" }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     // src/main/kotlin を使う (KGP の既定に頼らず明示する)
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
@@ -47,12 +58,18 @@ android {
     }
 }
 
+ksp {
+    // Room のスキーマを書き出す (exportSchema = true に必要)
+    arg("room.schemaLocation", layout.projectDirectory.dir("schemas").asFile.path)
+}
+
 dependencies {
     implementation(project(":core"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose) // collectAsStateWithLifecycle
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
 
@@ -87,6 +104,7 @@ dependencies {
     implementation(libs.androidx.exifinterface)
 
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services) // Task.await()
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
 

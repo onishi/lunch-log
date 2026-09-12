@@ -39,7 +39,19 @@
    - Firestore (ネイティブモード) と Cloud Storage を作成 (`asia-northeast1`)
 3. `google-services.json` を `app/` に置く。**このファイルはコミットしない。**
 4. `app/build.gradle.kts` の `google-services` プラグインのコメントを外す。
-5. ビルドする。
+5. `local.properties` (コミットされない) に環境ごとの値を書く。
+
+```properties
+# Google ログインに使うウェブクライアント ID (Firebase コンソール → 認証 → Google)
+lunchlog.googleWebClientId=xxxxxxxx.apps.googleusercontent.com
+# デプロイした Cloud Functions のベース URL
+lunchlog.functionsBaseUrl=https://asia-northeast1-<project>.cloudfunctions.net
+```
+
+未設定でもビルドは通る。その場合、ログインはエラーを表示し、店舗候補は
+位置情報からの候補が出ず履歴だけになる (アプリは動き続ける)。
+
+6. ビルドする。
 
 ```bash
 ./gradlew :core:test          # ドメイン層のテスト (Android SDK 不要)
