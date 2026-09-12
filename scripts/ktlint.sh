@@ -22,4 +22,4 @@ fi
 ARGS=()
 [ "${1:-}" = "--fix" ] && ARGS+=("-F")
 
-java -jar "$KTLINT_JAR" "${ARGS[@]}" "app/src/**/*.kt" "core/src/**/*.kt"
+java -jar "$KTLINT_JAR" ${ARGS[@]+"${ARGS[@]}"} "app/src/**/*.kt" "core/src/**/*.kt"

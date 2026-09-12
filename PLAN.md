@@ -145,15 +145,17 @@
 - [ ] Room のマイグレーション方針を決める (開発中は破壊的再作成でよい)
 - [ ] ユニットテスト: Repository の CRUD
 
-> **`:app` の実装は一通り書いたが、この環境では Android SDK が取得できず
-> ビルドしていない。** ktlint は通っているので構文としては成立しているが、
-> 型の整合性とライブラリ API の正しさは未確認。 開発機で `./gradlew :app:assembleDebug` を通すのが
-> Phase 1 の次の作業。バージョンの不整合や API の取り違えが出る前提でいる。
+> `./gradlew :app:assembleDebug` が通ることを確認した。`:core:test` も 122 件成功。
+> ビルドで見つかった問題:
+> - CameraX の `ProcessCameraProvider.getInstance()` が返す `ListenableFuture` が
+>   コンパイルできなかった。`com.google.guava:listenablefuture` の空シム jar に
+>   解決されていたため。`app/build.gradle.kts` に `com.google.guava:guava` を
+>   明示的な依存として追加して解消 (version catalog に `guava` を追加)。
+> - `scripts/ktlint.sh` が macOS 既定の bash 3.2 で `set -u` + 空配列展開により
+>   `unbound variable` エラーになるバグを修正。
 >
-> `:core` のテストは 122 件が通っている (`./gradlew :core:test`)。
-> Room / Firebase / CameraX を使う部分は Android SDK が必要なため、開発機で進める。
-> `:core` 側が揃っているので、`:app` は「Android の API を叩いて `:core` に渡す」
-> だけの薄い層で済むはず。
+> ただし Firebase 実機接続 (ログイン・Firestore 同期・Places API 疎通) は
+> Firebase プロジェクト未作成のため引き続き未検証。
 
 ### 1-3. 撮影と保存 (F-101, F-103, F-106, F-116)
 
@@ -395,3 +397,4 @@ Cloud Logging で足りるものとする。
 | 2026-09-12 | MVP の残り (編集導線・位置情報の権限説明・未同期マーク・アイコン・ktlint) を実装。ktlint が全ソースを構文解析でき、エラーなしを確認。 |
 | 2026-09-12 | Android の `:app` を一通り実装 (認証・Room・撮影・一覧・詳細・位置情報・同期)。**ビルド未検証**。 |
 | 2026-09-12 | MVP の純粋ロジックを `:core` に先行実装 (リサイズ / EXIF / 日時 / タイムライン / 店舗候補 / 再試行 / Firestore 変換)。テスト 82 件が通る。残りは Android SDK が要る部分のみ。 |
+| 2026-09-12 | Android SDK / JDK が使える環境で初めて `:app:assembleDebug` を通した。CameraX の guava 依存の欠落と `scripts/ktlint.sh` の bash 3.2 バグを修正。`:core:test` 122 件、`functions` 49 件、`typecheck` とも green。実機での Firebase 疎通は未着手。 |

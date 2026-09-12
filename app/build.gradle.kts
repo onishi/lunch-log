@@ -98,6 +98,9 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
+    // CameraX の ListenableFuture が実体を持つよう、コンパイル時にも本物の guava を解決させる
+    // (未指定だと guava の空シム jar に解決され、ProcessCameraProvider.getInstance() が使えない)
+    implementation(libs.guava)
 
     implementation(libs.coil.compose)
     implementation(libs.play.services.location)
