@@ -92,11 +92,11 @@
 
 ### Firebase
 
-- [ ] Firebase プロジェクトを作成 (`lunch-log-dev` / `lunch-log-prod` の 2 つ)
-- [ ] Android アプリを登録し `google-services.json` を配置 (**リポジトリに含めない**)
-- [ ] Authentication で Google プロバイダを有効化
-- [ ] Firestore を作成 (ネイティブモード / asia-northeast1)
-- [ ] Cloud Storage を作成 (同リージョン)
+- [x] Firebase プロジェクトを作成 (`lunch-log-dev` / `lunch-log-prod` の 2 つ)
+- [x] Android アプリを登録し `google-services.json` を配置 (**リポジトリに含めない**) — dev のみ。prod は同じ手順を後で
+- [x] Authentication で Google プロバイダを有効化 (dev)
+- [x] Firestore を作成 (ネイティブモード / asia-northeast1) — dev のみ。prod は請求先アカウントのプロジェクト数上限に達したため Google Cloud サポートに緩和を依頼中
+- [ ] Cloud Storage を作成 (同リージョン) — dev, prod とも Blaze プランへのアップグレードが必要。同じ請求先アカウントの上限に阻まれ保留中
 - [x] セキュリティルール初版を書く (`firebase/firestore.rules`, `firebase/storage.rules`) — **エミュレータ未検証**
 - [x] `firebase.json` にエミュレータ設定を記述 (起動確認は開発機で)
 - [ ] ルールのテストをエミュレータで書く

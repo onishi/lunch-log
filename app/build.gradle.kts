@@ -3,8 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    // google-services.json を置いてから有効にする (README のセットアップ手順を参照)
-    // alias(libs.plugins.google.services)
+    alias(libs.plugins.google.services)
 }
 
 val functionsBaseUrl: String = providers.gradleProperty("lunchlog.functionsBaseUrl").getOrElse("")

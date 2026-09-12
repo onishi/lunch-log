@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "dev": "lunch-log-dev",
+    "prod": "lunch-log-prod",
+    "default": "lunch-log-dev"
+  }
+}
