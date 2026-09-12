@@ -102,6 +102,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.play.services.location)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.mlkit.text.recognition.japanese) // メニュー写真の OCR (SPEC §6.2)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services) // Task.await()

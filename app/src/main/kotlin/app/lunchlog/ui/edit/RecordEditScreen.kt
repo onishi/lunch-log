@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -30,13 +32,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.lunchlog.core.model.MealType
+import app.lunchlog.core.model.PhotoKind
+import app.lunchlog.core.ocr.MenuTextParser
+import app.lunchlog.core.tabelog.TabelogUrl
 import app.lunchlog.core.validation.RecordError
 import coil.compose.AsyncImage
 import java.io.File
@@ -61,6 +71,10 @@ fun RecordEditScreen(
 
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(viewModel::addPhoto)
+    }
+
+    val pickMenuPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let { viewModel.addPhoto(it, PhotoKind.MENU) }
     }
 
     val requestLocation = rememberLauncherForActivityResult(
@@ -96,7 +110,16 @@ fun RecordEditScreen(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                     )
                 },
+                onPickMenuPhoto = {
+                    pickMenuPhoto.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                    )
+                },
             )
+
+            if (state.menuCandidates.isNotEmpty()) {
+                MenuCandidateRow(state.menuCandidates, viewModel::applyMenuCandidate)
+            }
 
             OutlinedTextField(
                 value = state.dishName,
@@ -105,6 +128,14 @@ fun RecordEditScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (state.dishSuggestions.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(state.dishSuggestions) { name ->
+                        AssistChip(onClick = { viewModel.setDishName(name) }, label = { Text(name) })
+                    }
+                }
+            }
 
             OutlinedTextField(
                 value = state.restaurantName,
@@ -125,6 +156,38 @@ fun RecordEditScreen(
 
             MealTypeRow(state.mealType, viewModel::setMealType)
 
+            OutlinedTextField(
+                value = state.price,
+                onValueChange = viewModel::setPrice,
+                label = { Text("金額") },
+                suffix = { Text("円") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            RatingRow(state.rating, viewModel::setRating)
+
+            OutlinedTextField(
+                value = state.memo,
+                onValueChange = viewModel::setMemo,
+                label = { Text("メモ") },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            TagRow(state.tags, viewModel::addTag, viewModel::removeTag)
+
+            OutlinedTextField(
+                value = state.tabelogUrl,
+                onValueChange = viewModel::setTabelogUrl,
+                label = { Text("食べログ URL") },
+                singleLine = true,
+                isError = state.tabelogWarning == TabelogUrl.Warning.NOT_TABELOG,
+                supportingText = state.tabelogWarning?.let { warning -> { Text(warning.message()) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             Text(
                 text = state.eatenAt.atZone(ZoneId.systemDefault()).format(DATE_TIME_FORMAT),
                 style = MaterialTheme.typography.bodyMedium,
@@ -139,7 +202,12 @@ fun RecordEditScreen(
 }
 
 @Composable
-private fun PhotoRow(paths: List<String>, onTakePhoto: () -> Unit, onPickPhoto: () -> Unit) {
+private fun PhotoRow(
+    paths: List<String>,
+    onTakePhoto: () -> Unit,
+    onPickPhoto: () -> Unit,
+    onPickMenuPhoto: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (paths.isNotEmpty()) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -156,6 +224,7 @@ private fun PhotoRow(paths: List<String>, onTakePhoto: () -> Unit, onPickPhoto: 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onTakePhoto) { Text("撮影") }
             OutlinedButton(onClick = onPickPhoto) { Text("写真を選ぶ") }
+            OutlinedButton(onClick = onPickMenuPhoto) { Text("メニュー表") }
         }
     }
 }
@@ -219,6 +288,74 @@ private fun MealTypeRow(selected: MealType, onSelect: (MealType) -> Unit) {
             )
         }
     }
+}
+
+/** OCR で読み取ったメニュー候補 (SPEC §6.2)。押すとメニュー名と金額が入る。 */
+@Composable
+private fun MenuCandidateRow(
+    candidates: List<MenuTextParser.MenuCandidate>,
+    onSelect: (MenuTextParser.MenuCandidate) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("メニュー表から読み取りました", style = MaterialTheme.typography.labelMedium)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(candidates) { candidate ->
+                AssistChip(
+                    onClick = { onSelect(candidate) },
+                    label = {
+                        val price = candidate.price
+                        Text(if (price != null) "${candidate.name} ${price}円" else candidate.name)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** 5 段階評価 (SPEC F-108)。同じ星をもう一度押すと解除できる。 */
+@Composable
+private fun RatingRow(rating: Int?, onSelect: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("評価", style = MaterialTheme.typography.bodyMedium)
+        (1..5).forEach { star ->
+            TextButton(onClick = { onSelect(star) }) {
+                Text(if (rating != null && star <= rating) "★" else "☆")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagRow(tags: List<String>, onAdd: (String) -> Unit, onRemove: (String) -> Unit) {
+    var input by remember { mutableStateOf("") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (tags.isNotEmpty()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(tags) { tag ->
+                    AssistChip(onClick = { onRemove(tag) }, label = { Text("#$tag ×") })
+                }
+            }
+        }
+        OutlinedTextField(
+            value = input,
+            onValueChange = { input = it },
+            label = { Text("タグを追加") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                onAdd(input)
+                input = ""
+            }),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+private fun TabelogUrl.Warning.message(): String = when (this) {
+    TabelogUrl.Warning.NOT_TABELOG -> "食べログの URL ではないようです"
+    TabelogUrl.Warning.NOT_HTTPS -> "https ではありません"
+    TabelogUrl.Warning.MALFORMED -> "URL として読めません"
 }
 
 private fun MealType.label(): String = when (this) {

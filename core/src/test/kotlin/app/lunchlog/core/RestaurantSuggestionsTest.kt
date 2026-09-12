@@ -114,6 +114,35 @@ class RestaurantSuggestionsTest {
     }
 
     @Test
+    fun `行ったことのある店を距離より優先する`() {
+        // SPEC §6.1: 訪問済みは大きく加点する。距離だけで並べると、
+        // 隣のビルの初めての店が上に来てしまう。
+        val ranked = RestaurantSuggestions.rankByHistory(
+            nearby = listOf(nearby("初めての店", 20), nearby("いつもの店", 120)),
+            history = listOf(record("いつもの店", "2026-09-11T03:00:00Z")),
+        )
+        assertEquals(listOf("いつもの店", "初めての店"), ranked.map { it.name })
+    }
+
+    @Test
+    fun `どちらも未訪問なら距離順`() {
+        val ranked = RestaurantSuggestions.rankByHistory(
+            nearby = listOf(nearby("遠い店", 200), nearby("近い店", 30)),
+            history = emptyList(),
+        )
+        assertEquals(listOf("近い店", "遠い店"), ranked.map { it.name })
+    }
+
+    @Test
+    fun `削除済みの記録は訪問済みとみなさない`() {
+        val ranked = RestaurantSuggestions.rankByHistory(
+            nearby = listOf(nearby("近い店", 30), nearby("消した店", 200)),
+            history = listOf(record("消した店", "2026-09-11T03:00:00Z", deleted = true)),
+        )
+        assertEquals(listOf("近い店", "消した店"), ranked.map { it.name })
+    }
+
+    @Test
     fun `合わせても上限を超えない`() {
         val merged = RestaurantSuggestions.merge(
             nearby = (1..4).map { nearby("近$it", it * 10) },

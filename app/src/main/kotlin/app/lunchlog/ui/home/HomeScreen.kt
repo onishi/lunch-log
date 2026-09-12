@@ -17,6 +17,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,11 +44,17 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onAddRecord: () -> Unit,
     onOpenRecord: (String) -> Unit,
+    onSearch: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("ランチログ") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("ランチログ") },
+                actions = { TextButton(onClick = onSearch) { Text("検索") } },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = onAddRecord, text = { Text("記録する") }, icon = {})
         },

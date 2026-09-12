@@ -7,6 +7,7 @@ import app.lunchlog.ui.auth.SignInViewModel
 import app.lunchlog.ui.detail.RecordDetailViewModel
 import app.lunchlog.ui.edit.RecordEditViewModel
 import app.lunchlog.ui.home.HomeViewModel
+import app.lunchlog.ui.search.SearchViewModel
 
 /**
  * ViewModel の生成。DI ライブラリを入れない代わりの最小限の仕掛け。
@@ -25,7 +26,10 @@ class ViewModelFactory(
             HomeViewModel(locator.recordRepository) as T
 
         modelClass.isAssignableFrom(RecordEditViewModel::class.java) ->
-            RecordEditViewModel(locator.recordRepository, locator.currentLocation) as T
+            RecordEditViewModel(locator.recordRepository, locator.currentLocation, locator.menuOcr) as T
+
+        modelClass.isAssignableFrom(SearchViewModel::class.java) ->
+            SearchViewModel(locator.recordRepository) as T
 
         modelClass.isAssignableFrom(RecordDetailViewModel::class.java) ->
             RecordDetailViewModel(locator.recordRepository, requireNotNull(recordId)) as T

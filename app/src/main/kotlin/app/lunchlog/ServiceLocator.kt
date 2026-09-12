@@ -3,6 +3,7 @@ package app.lunchlog
 import android.content.Context
 import app.lunchlog.data.RecordRepository
 import app.lunchlog.data.local.LunchLogDatabase
+import app.lunchlog.data.ocr.MenuOcr
 import app.lunchlog.data.photo.PhotoStore
 import app.lunchlog.data.remote.FirestoreRecordSource
 import app.lunchlog.data.remote.PhotoUploader
@@ -41,6 +42,7 @@ class ServiceLocator private constructor(context: Context) {
     }
     val placesClient: PlacesClient by lazy { PlacesClient(auth) }
     val currentLocation: CurrentLocation by lazy { CurrentLocation(appContext) }
+    val menuOcr: MenuOcr by lazy { MenuOcr(appContext) }
 
     val recordRepository: RecordRepository by lazy {
         RecordRepository(

@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -43,6 +44,7 @@ fun RecordDetailScreen(
     onBack: () -> Unit,
 ) {
     val record by viewModel.record.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
     var confirmingDelete by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -81,12 +83,33 @@ fun RecordDetailScreen(
 
             Text(current.displayTitle ?: "(名前なし)", style = MaterialTheme.typography.headlineSmall)
             current.restaurantName?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+
+            val details = listOfNotNull(
+                current.price?.let { "${it}円" },
+                current.rating?.let { "★".repeat(it) },
+            )
+            if (details.isNotEmpty()) {
+                Text(details.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+            }
+
+            if (current.tags.isNotEmpty()) {
+                Text(
+                    current.tags.joinToString(" ") { "#$it" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(
                 current.eatenAt.atZone(ZoneId.systemDefault()).format(DATE_TIME_FORMAT),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             current.memo?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+
+            // 食べログへは外部ブラウザで開く。ページの内容は取り込まない (SPEC §6.3)。
+            current.tabelogUrl?.let { url ->
+                TextButton(onClick = { uriHandler.openUri(url) }) { Text("食べログで見る ↗") }
+            }
         }
     }
 

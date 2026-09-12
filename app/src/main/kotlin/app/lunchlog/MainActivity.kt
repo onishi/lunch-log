@@ -1,5 +1,6 @@
 package app.lunchlog
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -26,18 +27,24 @@ import app.lunchlog.ui.edit.RecordEditScreen
 import app.lunchlog.ui.edit.RecordEditViewModel
 import app.lunchlog.ui.home.HomeScreen
 import app.lunchlog.ui.home.HomeViewModel
+import app.lunchlog.ui.search.SearchScreen
+import app.lunchlog.ui.search.SearchViewModel
 import app.lunchlog.ui.theme.LunchLogTheme
 
 private object Routes {
     const val SIGN_IN = "sign-in"
     const val HOME = "home"
     const val CAMERA = "camera"
+    const val SEARCH = "search"
 
     /** recordId が空なら新規作成。画面は同じものを使い回す (SPEC §9.1)。 */
-    const val EDIT = "edit?recordId={recordId}"
+    const val EDIT = "edit?recordId={recordId}&sharedUrl={sharedUrl}"
     const val DETAIL = "detail/{recordId}"
 
-    fun edit(recordId: String? = null) = if (recordId == null) "edit?recordId=" else "edit?recordId=$recordId"
+    fun edit(recordId: String? = null, sharedUrl: String? = null): String {
+        val encoded = sharedUrl?.let { Uri.encode(it) }.orEmpty()
+        return "edit?recordId=${recordId.orEmpty()}&sharedUrl=$encoded"
+    }
 
     fun detail(recordId: String) = "detail/$recordId"
 }
@@ -49,11 +56,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // 共有されてきた URL。食べログのページから「共有」した場合に入る (SPEC §6.3)。
+        val sharedText = intent?.takeIf { it.action == Intent.ACTION_SEND }
+            ?.getStringExtra(Intent.EXTRA_TEXT)
+
         setContent {
             LunchLogTheme {
                 val locator = remember { ServiceLocator.from(applicationContext) }
                 val navController = rememberNavController()
-                val startDestination = if (locator.auth.currentUser != null) Routes.HOME else Routes.SIGN_IN
+                val signedIn = locator.auth.currentUser != null
+                val startDestination = when {
+                    !signedIn -> Routes.SIGN_IN
+                    // 共有で起動したときは、URL を入れた新規記録を直接開く。
+                    sharedText != null -> Routes.edit(sharedUrl = sharedText)
+                    else -> Routes.HOME
+                }
 
                 LunchLogNavHost(locator, navController, startDestination)
             }
@@ -82,6 +99,7 @@ private fun LunchLogNavHost(
                 viewModel = viewModel,
                 onAddRecord = { navController.navigate(Routes.edit()) },
                 onOpenRecord = { navController.navigate(Routes.detail(it)) },
+                onSearch = { navController.navigate(Routes.SEARCH) },
             )
         }
 
@@ -89,6 +107,10 @@ private fun LunchLogNavHost(
             route = Routes.EDIT,
             arguments = listOf(
                 navArgument("recordId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("sharedUrl") {
                     type = NavType.StringType
                     defaultValue = ""
                 },
@@ -101,8 +123,14 @@ private fun LunchLogNavHost(
                 factory = ViewModelFactory(locator),
             )
             val editingId = entry.arguments?.getString("recordId").orEmpty()
+            val sharedUrl = entry.arguments?.getString("sharedUrl").orEmpty()
             LaunchedEffect(editingId) {
-                if (editingId.isEmpty()) viewModel.startNew() else viewModel.load(editingId)
+                if (editingId.isEmpty()) {
+                    viewModel.startNew()
+                    if (sharedUrl.isNotEmpty()) viewModel.setTabelogUrl(sharedUrl)
+                } else {
+                    viewModel.load(editingId)
+                }
             }
 
             // 撮影画面から戻るときに Uri を受け取る。
@@ -119,6 +147,15 @@ private fun LunchLogNavHost(
                 onSaved = { navController.popBackStack() },
                 onTakePhoto = { navController.navigate(Routes.CAMERA) },
                 onCancel = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.SEARCH) {
+            val viewModel: SearchViewModel = viewModel(factory = ViewModelFactory(locator))
+            SearchScreen(
+                viewModel = viewModel,
+                onOpenRecord = { navController.navigate(Routes.detail(it)) },
+                onBack = { navController.popBackStack() },
             )
         }
 

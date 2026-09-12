@@ -58,6 +58,34 @@ object RestaurantSuggestions {
             .toList()
 
     /**
+     * 位置情報からの候補を、過去に行った店を上げて並べ替える (SPEC §6.1)。
+     *
+     * 距離だけで並べると、隣のビルの初めての店が上に来る。実際には
+     * 「前にも行った店」のほうが選ばれやすいので、訪問済みを優先する。
+     * 営業時間による加点は、時間の情報を持っていないので入れていない。
+     */
+    fun rankByHistory(
+        nearby: List<RestaurantSuggestion>,
+        history: List<LunchRecord>,
+        limit: Int = MAX_SUGGESTIONS,
+    ): List<RestaurantSuggestion> {
+        val visited = history
+            .asSequence()
+            .filterNot { it.isDeleted }
+            .mapNotNull { it.restaurantName?.trim()?.takeIf(String::isNotEmpty) }
+            .map(::normalizeName)
+            .toSet()
+
+        return nearby
+            .sortedWith(
+                compareByDescending<RestaurantSuggestion> { normalizeName(it.name) in visited }
+                    .thenBy { it.distanceMeters ?: Int.MAX_VALUE }
+                    .thenBy { it.name },
+            )
+            .take(limit)
+    }
+
+    /**
      * 位置情報からの候補と履歴の候補を合わせる。
      *
      * 位置情報の候補を先に置く (その場にいる店のほうが当たる)。
