@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// SPEC §7.6, §6.7: 写真は所有者だけが読み書きできる。
+// 原本 (users/{uid}/originals/) も同じ扱い。外部への公開は Cloud Functions が
+// 発行する有効期限つきの署名付き URL 経由でのみ行う。
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

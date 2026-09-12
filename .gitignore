@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# 署名鍵 (絶対にコミットしない)
+*.keystore
+*.jks
+keystore.properties
+
+# Firebase の設定 (プロジェクト固有。README のセットアップ手順を参照)
+google-services.json
+.firebase/
+firebase-debug.log
+
+# Cloud Functions
+functions/node_modules/
+functions/lib/
+node_modules/
+
+# OS
+.DS_Store

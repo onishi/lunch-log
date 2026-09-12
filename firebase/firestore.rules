@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// SPEC §7.6: 自分のデータにしか触れない。
+// 記録・店舗・連携設定はすべて users/{uid} の下にあるため、ここ一箇所で守れる。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // 上記以外は明示的に拒否する (既定で拒否だが、意図を残すため書いておく)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

@@ -83,11 +83,12 @@
 
 ### 開発環境
 
-- [ ] Android Studio の最新安定版で新規プロジェクト作成 (Empty Compose Activity)
-- [ ] パッケージ名を決める (例: `app.lunchlog`)
-- [ ] `minSdk = 29` / `targetSdk` は最新安定版 (SPEC §4)
-- [ ] Gradle Version Catalog (`libs.versions.toml`) で依存を一元管理
-- [ ] モジュール構成を決める (MVP は単一モジュールで開始。分割は必要になってから)
+- [x] Android Studio の最新安定版で新規プロジェクト作成 (Empty Compose Activity)
+- [x] パッケージ名を決める (例: `app.lunchlog`)
+- [x] `minSdk = 29` / `targetSdk` は最新安定版 (SPEC §4)
+- [x] Gradle Version Catalog (`libs.versions.toml`) で依存を一元管理
+- [x] モジュール構成を決める → `:core` (純 Kotlin) + `:app` (Android) の 2 モジュール
+      - `:core` は Android SDK なしでテストできる。判断を含むロジックはここに置く
 
 ### Firebase
 
@@ -96,19 +97,21 @@
 - [ ] Authentication で Google プロバイダを有効化
 - [ ] Firestore を作成 (ネイティブモード / asia-northeast1)
 - [ ] Cloud Storage を作成 (同リージョン)
-- [ ] セキュリティルール初版を書く (SPEC §7.6 — 所有者のみ read/write)
-- [ ] Firebase エミュレータをローカルで起動できるようにする
+- [x] セキュリティルール初版を書く (`firebase/firestore.rules`, `firebase/storage.rules`) — **エミュレータ未検証**
+- [x] `firebase.json` にエミュレータ設定を記述 (起動確認は開発機で)
+- [ ] ルールのテストをエミュレータで書く
 
 ### CI とコード品質
 
-- [ ] `.gitignore` (`google-services.json`, `local.properties`, `*.keystore` を除外)
-- [ ] GitHub Actions: `ktlint` / `detekt` / `test` / `assembleDebug`
+- [x] `.gitignore` (`google-services.json`, `local.properties`, `*.keystore` を除外)
+- [x] GitHub Actions: `:core:test` と `:app:assembleDebug` (**未検証** — Android SDK がある環境で要確認)
+- [ ] GitHub Actions に `ktlint` / `detekt` を追加
 - [ ] Renovate か Dependabot で依存更新 (任意)
 
 ### ドキュメント
 
-- [ ] `README.md` — セットアップ手順 (Firebase 設定の入れ方を含む)
-- [ ] `CLAUDE.md` — コーディング規約、ディレクトリ構成、よく使うコマンド
+- [x] `README.md` — セットアップ手順 (Firebase 設定の入れ方を含む)
+- [x] `CLAUDE.md` — コーディング規約、ディレクトリ構成、よく使うコマンド
 
 ---
 
@@ -127,15 +130,22 @@
 
 ### 1-2. データ層 (SPEC §7.2)
 
+- [x] ドメインモデルを `:core` に定義 (`LunchRecord` / `Photo` / `GeoLocation` / `MealType`)
+- [x] 食事種別の推定 `MealTypeInference` (F-116) — テスト済み
+- [x] geohash エンコード `Geohash` (SPEC §7.2, §6.1 のキャッシュキー) — テスト済み
+- [x] 保存前の検証 `RecordValidator` (SPEC §9.1「必須は写真かメニュー名の一方だけ」) — テスト済み
 - [ ] Room の `RecordEntity` / `PhotoEntity` を定義 (SPEC §7.2 の一部だけ)
   - MVP で持つ項目: `id`, `eatenAt`, `mealType`, `dishName`, `restaurantName`,
     `location`, `photos[]`, `createdAt`, `updatedAt`, `deletedAt`
   - **Phase 2 以降の項目 (price, rating, tags, memo, restaurantId) も
     カラムだけ先に用意する** — 後からのマイグレーションを減らすため
-- [ ] ULID 生成ユーティリティ
+- [x] ULID 生成ユーティリティ
 - [ ] DAO と `RecordRepository` (Room を Single Source of Truth にする)
 - [ ] Room のマイグレーション方針を決める (開発中は破壊的再作成でよい)
 - [ ] ユニットテスト: Repository の CRUD
+
+> `:core` のテストは 32 件が通っている (`./gradlew :core:test`)。
+> Room / Firebase を使う部分は Android SDK が必要なため、開発機で進める。
 
 ### 1-3. 撮影と保存 (F-101, F-103, F-106, F-116)
 
@@ -323,7 +333,8 @@ Cloud Logging で足りるものとする。
 ## 横断タスク (各フェーズで継続)
 
 - [ ] 新しい外部 API を叩く前に、必ず利用規約と上限を確認する
-- [ ] Firestore のインデックスを追加したら SPEC §7.5 に追記する
+- [x] Firestore のインデックス定義 (`firebase/firestore.indexes.json`) を SPEC §7.5 に合わせて作成
+- [ ] インデックスを追加したら SPEC §7.5 に追記する
 - [ ] セキュリティルールを変えたらエミュレータでテストを書く
 - [ ] GCP の予算アラートを確認する (Places API / Cloud Storage — SPEC §13)
 - [ ] 手動テスト: 圏外 → 復帰、権限拒否、大量データ (1,000 件)、
@@ -352,4 +363,6 @@ Cloud Logging で足りるものとする。
 
 | 日付 | できごと |
 |------|----------|
-| 2026-09-12 | SPEC.md v0.4 確定。PLAN.md 作成。Phase 0 着手前。 |
+| 2026-09-12 | SPEC.md v0.4 確定。PLAN.md 作成。 |
+| 2026-09-12 | Phase 0 の足場を作成 (Gradle / Version Catalog / CI / README / CLAUDE.md)。`:core` + `:app` の 2 モジュール構成に決定。 |
+| 2026-09-12 | Phase 1-2 のドメイン層を `:core` に実装。テスト 32 件が通る。Android を含む部分は開発機で継続。 |
