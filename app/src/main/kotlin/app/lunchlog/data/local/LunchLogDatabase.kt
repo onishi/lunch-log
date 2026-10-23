@@ -15,7 +15,7 @@ abstract class LunchLogDatabase : RoomDatabase() {
             Room.databaseBuilder(context, LunchLogDatabase::class.java, "lunch-log.db")
                 // 開発中はスキーマ変更のたびに作り直す (PLAN.md Phase 1-2)。
                 // 自分が毎日使い始める前に、正式なマイグレーションへ切り替えること。
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
 }

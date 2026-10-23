@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
@@ -11,12 +10,12 @@ val googleWebClientId: String = providers.gradleProperty("lunchlog.googleWebClie
 
 android {
     namespace = "app.lunchlog"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "app.lunchlog"
         minSdk = 29 // SPEC §4: Android 10 以上
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -40,20 +39,24 @@ android {
         isCoreLibraryDesugaringEnabled = true // java.time を minSdk 29 で使う
     }
 
-    kotlinOptions { jvmTarget = "17" }
-
     buildFeatures {
         compose = true
         buildConfig = true
     }
 
     // src/main/kotlin を使う (KGP の既定に頼らず明示する)
-    sourceSets["main"].kotlin.srcDir("src/main/kotlin")
-    sourceSets["test"].kotlin.srcDir("src/test/kotlin")
-    sourceSets["androidTest"].kotlin.srcDir("src/androidTest/kotlin")
+    sourceSets["main"].kotlin.directories.add("src/main/kotlin")
+    sourceSets["test"].kotlin.directories.add("src/test/kotlin")
+    sourceSets["androidTest"].kotlin.directories.add("src/androidTest/kotlin")
 
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
@@ -109,7 +112,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services) // Task.await()
 
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

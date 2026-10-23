@@ -8,7 +8,7 @@
 #   scripts/ktlint.sh --fix  自動修正
 set -euo pipefail
 
-KTLINT_VERSION="1.5.0"
+KTLINT_VERSION="1.8.0"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/lunch-log"
 KTLINT_JAR="$CACHE_DIR/ktlint-$KTLINT_VERSION.jar"
 

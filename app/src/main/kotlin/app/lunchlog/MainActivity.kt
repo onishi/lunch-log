@@ -67,8 +67,10 @@ class MainActivity : ComponentActivity() {
                 val signedIn = locator.auth.currentUser != null
                 val startDestination = when {
                     !signedIn -> Routes.SIGN_IN
+
                     // 共有で起動したときは、URL を入れた新規記録を直接開く。
                     sharedText != null -> Routes.edit(sharedUrl = sharedText)
+
                     else -> Routes.HOME
                 }
 
