@@ -27,7 +27,8 @@
 ### 必要なもの
 
 - JDK 17
-- Android Studio (最新安定版) / Android SDK 35
+- Android Studio (最新安定版) / Android SDK 37 (compileSdk。targetSdk は 36)
+- Node.js 24 (Cloud Functions のランタイムに合わせる)
 - Firebase プロジェクト
 
 ### 手順

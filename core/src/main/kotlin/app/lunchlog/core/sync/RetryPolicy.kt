@@ -35,8 +35,13 @@ object RetryPolicy {
      */
     fun shouldRetry(error: SyncError): Boolean = when (error) {
         SyncError.NETWORK, SyncError.SERVER, SyncError.RATE_LIMITED -> true
-        SyncError.UNAUTHENTICATED -> false // 再ログインが要る
-        SyncError.PERMISSION_DENIED -> false // ルール違反。再試行しても同じ
+
+        SyncError.UNAUTHENTICATED -> false
+
+        // 再ログインが要る
+        SyncError.PERMISSION_DENIED -> false
+
+        // ルール違反。再試行しても同じ
         SyncError.INVALID_DATA -> false // 送る内容が壊れている
     }
 

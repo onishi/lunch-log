@@ -251,6 +251,7 @@ class RecordEditViewModel(
 
             when (val result = repository.save(record)) {
                 is ValidationResult.Valid -> onSaved()
+
                 is ValidationResult.Invalid ->
                     _state.update { it.copy(saving = false, errors = result.errors) }
             }
