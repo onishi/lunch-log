@@ -2,7 +2,12 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.google.services)
+}
+
+// google-services.json はコミットしないため、CI や初回 clone では存在しない。
+// そのときはプラグインを当てずにビルドだけ通す (README のセットアップ手順 3)。
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
 }
 
 val functionsBaseUrl: String = providers.gradleProperty("lunchlog.functionsBaseUrl").getOrElse("")
